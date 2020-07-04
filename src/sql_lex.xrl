@@ -9,17 +9,13 @@ OS = (.*|[{W}]*)
 
 Rules.
 
-% erlang funcs
-(fun[{W}]*\({A}*\){OS}*\->{OS}*end\.)               : match_fun(TokenLine, TokenChars).
-(fun[{W}]+['A-Za-z0-9_]+:['A-Za-z0-9_]+\/[0-9]+\.)  : {token, {'STRING', TokenLine, TokenChars}}.
-
 % strings
 (\'([^\']*(\'\')*)*\')                              : {token, {'STRING', TokenLine, TokenChars}}.
 (\"((\$|[^\"]*)*(\"\")*)*\")                        : {token, {'NAME', TokenLine, TokenChars}}.
 
 % punctuation
 (=|=~|~=|!=|<>|<|>|<=|>=)                           : {token, {'COMPARISON', TokenLine, list_to_atom(TokenChars)}}.
-([\-\+\*\/\(\)\[\]\,\.]|(div))                      : {token, {list_to_atom(TokenChars), TokenLine}}.
+([\-\+\*\/\(\)\[\]\,\.\{\}]|(div))                      : {token, {list_to_atom(TokenChars), TokenLine}}.
 
 % range
 \[({SD}\.\.{SD})\]                                  :
@@ -59,11 +55,6 @@ match_any(TokenChars, TokenLen, TokenLine, [{P, T} | TPs]) ->
         nomatch ->
             match_any(TokenChars, TokenLen, TokenLine, TPs)
     end.
-
-match_fun(TokenLine, TokenChars) ->
-    {match, [MatchedFunStr]} = re:run(TokenChars, "^fun.*end\\.", [ungreedy, dotall, {capture, all, list}]),
-    {token, {'STRING', TokenLine, MatchedFunStr}, string:sub_string(TokenChars, length(MatchedFunStr) + 1)}.
-
 
 strip(TokenChars,TokenLen) ->
     lists:sublist(TokenChars, 2, TokenLen - 2).

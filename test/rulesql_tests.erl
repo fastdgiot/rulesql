@@ -728,3 +728,35 @@ foreach_do_incase_test_() ->
             rulesql:parsetree(<<"FOREACH a DO a INCASE a <> 1 FROM abc">>))
 
     ].
+
+json_map_test_() ->
+    [
+        %% map on a json
+        ?_assertMatch(
+            {ok,{select,
+                    [{fields,['*']},
+                     {from,[<<"abc">>]},
+                     {where,{}}]}},
+            rulesql:parsetree(
+                <<"SELECT
+                   lmap((elem, index) =>
+                      prefixed = 'pre_' + elem;
+                      prefixed + '_suffix';
+                  , payload.devices) as newlist"
+                  "FROM \"abc\"" >>)),
+
+        %% pipe
+        ?_assertMatch(
+            {ok,{select,
+                    [{fields,['*']},
+                     {from,[<<"abc">>]},
+                     {where,{}}]}},
+            rulesql:parsetree(
+                <<"SELECT
+                   payload.devices
+                   | lfilter((elem, index, array) => elem != '')
+                   | lmap((elem, index) =>'pre_' + elem)
+                   as newlist
+                   "
+                  "FROM \"abc\"" >>)),\
+    ].
