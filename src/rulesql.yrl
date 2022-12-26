@@ -161,7 +161,8 @@ event_exp -> from_clause where_clause :
 
 from_clause -> FROM from_column_commalist : {from, '$2'}.
 
-from_column -> NAME           : [unwrap_bin('$1')].
+from_column -> NAME   : [unwrap_bin('$1')].
+from_column -> STRING : [unwrap_bin('$1')].
 
 from_column_commalist ->                           from_column :        '$1'.
 from_column_commalist -> from_column_commalist ',' from_column : '$1'++ '$3'.
@@ -290,6 +291,8 @@ Erlang code.
 
 -include("sql_lex.hrl").
 
+-type kind() :: select | foreach.
+
 %%-----------------------------------------------------------------------------
 %%                          parser helper functions
 %%-----------------------------------------------------------------------------
@@ -338,8 +341,14 @@ const(V) -> {const, V}.
 make_list(L) when is_list(L) -> L;
 make_list(L) -> [L].
 
-unquote(Str) ->
-    string:trim(string:trim(Str, both, "'"), both, "\"").
+unquote("'" ++ _ = Str) ->
+    string:trim(Str, both, "'");
+
+unquote("\"" ++ _ = Str) ->
+    string:trim(Str, both, "\"");
+
+unquote(Str) when is_list(Str) ->
+    Str.
 
 merge_path({var, V1}, {var, V2}) ->
     {path, [{key, V1}, {key, V2}]};
@@ -369,7 +378,7 @@ trans_list_ref({cons, Head, Tail}) ->
 %%                                  PARSER
 %%-----------------------------------------------------------------------------
 -spec parsetree(binary()|list()) ->
-    {parse_error, term()} | {lex_error, term()} | {ok, {select | foreach, [tuple()]}}.
+    {parse_error, term()} | {lex_error, term()} | {ok, {kind(), [tuple()]}}.
 parsetree(Sql) ->
     ?D("Start~n Sql: ~p~n", [Sql]),
     case parsetree_with_tokens(Sql) of
@@ -380,7 +389,7 @@ parsetree(Sql) ->
     end.
 
 -spec parsetree_with_tokens(binary()|list()) ->
-    {parse_error, term()} | {lex_error, term()} | {ok, {[tuple()], list()}}.
+    {parse_error, term()} | {lex_error, term()} | {ok, {{kind(), [tuple()]}, list()}}.
 parsetree_with_tokens([]) -> {parse_error, invalid_string};
 parsetree_with_tokens(<<>>) -> {parse_error, invalid_string};
 parsetree_with_tokens(Sql0) ->
